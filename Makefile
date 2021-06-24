@@ -13,7 +13,7 @@ all: multitrack
 
 multitrack_objs = \
 	src/capabilities.o \
-	src/event.o \
+	src/mouse.o \
 	src/gestures.o \
 	src/hwstate.o \
 	src/mconfig.o \

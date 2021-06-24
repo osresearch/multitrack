@@ -30,6 +30,8 @@
 #include "gestures.h"
 #include "mtouch.h"
 #include "trig.h"
+#include "mouse.h"
+
 #define DEBUG_GESTURES 1
 #ifdef DEBUG_GESTURES
 # define LOG_DEBUG_GESTURES LOG_DEBUG
@@ -802,9 +804,13 @@ static int two_touch(
 
 	if (touches_count != 2)
 	{
-		// release the mouse button
+		// release the mouse button and any modifiers
 		if (touching)
+		{
 			mouse_button(2, 0);
+			mouse_modifiers(0);
+		}
+
 		touching = 0;
 		return 0;
 	}

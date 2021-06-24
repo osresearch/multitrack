@@ -4,15 +4,12 @@
 #include <math.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
+#include "mouse.h"
 
 static Display * display;
 static XModifierKeymap * modifiers;
 
 
-/*
- * Generate a relative move command by querying the current mouse
- * coordinates and then sending a motion event.
- */
 void
 mouse_move(int dx, int dy)
 {
@@ -59,23 +56,3 @@ mouse_modifiers(int modmask)
 		}
 	}
 }
-
-/*
-int main(int argc, char * argv[])
-{
-	Display *display = XOpenDisplay(0);
-	if(display == NULL)
-		return -1;
-
-
-	for(int i = 0 ; i < 10 ; i++)
-	{
-		printf("%d sending\n", i);
-		mouse_move(display, 20 * sin(i), 20 * cos(i), None, None);
-		sleep(1);
-	}
-
-	XCloseDisplay(display);
-	return 0;
-}
-*/

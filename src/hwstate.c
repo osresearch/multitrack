@@ -123,6 +123,9 @@ int hwstate_modify(struct HWState *s, struct mtdev *dev, int fd,
 {
 	struct input_event ev;
 	int ret;
+	if (mtdev_idle(dev, fd, 1000))
+		return 0;
+
 	while ((ret = mtdev_get(dev, fd, &ev, 1)) > 0) {
 		if (read_event(s, caps, &ev))
 			return 1;

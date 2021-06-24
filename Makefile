@@ -5,6 +5,7 @@ CFLAGS = \
 	-I include \
 	`pkg-config xorg-server --cflags` \
 	`pkg-config mtdev --cflags` \
+	`pkg-config libevdev --cflags` \
 
 
 CC = $(CROSS)gcc
@@ -29,6 +30,7 @@ multitrack: $(multitrack_objs)
 		$^ \
 		`pkg-config xorg-server --libs` \
 		`pkg-config mtdev --libs` \
+		`pkg-config libevdev --libs` \
 		-lXtst \
 		-lX11 \
 		-lm \

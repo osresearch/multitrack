@@ -801,6 +801,7 @@ static int two_touch(
 )
 {
 	static int touching;
+	static struct timeval last_switch;
 
 	if (touches_count != 2)
 	{
@@ -813,8 +814,12 @@ static int two_touch(
 		}
 
 		touching = 0;
+		last_switch.tv_sec = 0;
 		return 0;
 	}
+
+	struct timeval now;
+	microtime(&now);
 
 	// compute the current point and the previous point
 	// x0,y0 is finger 0
@@ -884,17 +889,27 @@ static int two_touch(
 	// what's largest? shift, scale, or rotate?
 	double theta_threshold = 0.1;
 	double scale_threshold = 0.002;
-	double move_threshold = 2;
+	double move_threshold = 1;
 
+/*
 	if (touching == 3)
 		theta_threshold /= 4;
 	if (touching == 2)
 		scale_threshold /= 4;
 	if (touching == 1)
 		move_threshold /= 4;
-
+*/
+	struct timeval delta;
+	timersub(&now, &last_switch, &delta);
+	if (delta.tv_sec < 1 && delta.tv_sec < 500000)
+	{
+		// do not switch more than twice per second
+		// should be accumulating averages of the positions
+		// so that we can see longer term trends
+	} else
 	if (fabs(theta) > theta_threshold && touching != 3)
 	{
+		last_switch = now;
 		printf("ROTATING (was %d) ", touching);
 		if (touching)
 			mouse_button(2, 0);
@@ -904,6 +919,7 @@ static int two_touch(
 	} else
 	if (fabs(scale) > scale_threshold && touching != 2)
 	{
+		last_switch = now;
 		printf("SCALING (was %d) ", touching);
 		if (touching)
 			mouse_button(2, 0);
@@ -913,6 +929,7 @@ static int two_touch(
 	} else
 	if (touching == 0 || (fabs(v) > move_threshold && touching != 1))
 	{
+		last_switch = now;
 		// no modifiers for movement
 		printf("MOVING (was %d) ", touching);
 		if (touching)

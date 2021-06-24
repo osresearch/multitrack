@@ -30,7 +30,7 @@
 #include "gestures.h"
 #include "mtouch.h"
 #include "trig.h"
-//#define DEBUG_GESTURES 1
+#define DEBUG_GESTURES 1
 #ifdef DEBUG_GESTURES
 # define LOG_DEBUG_GESTURES LOG_DEBUG
 # define LOG_EMULATED LOG_INFO
@@ -570,6 +570,8 @@ static void trigger_move(struct Gestures* gs,
 			const struct MConfig* cfg,
 			int dx, int dy)
 {
+	return;
+
 	if ((gs->move_type == GS_MOVE || timercmp(&gs->time, &gs->move_wait, >=)) && (dx != 0 || dy != 0)) {
 		if (trigger_drag_start(gs, cfg, dx, dy)) {
 			gs->move_dx = dx*cfg->sensitivity;
@@ -686,6 +688,7 @@ static int trigger_swipe_unsafe(struct Gestures* gs,
 
 	dir = trig_generalize(get_swipe_dir_n(touches, touches_count));
 	button = get_button_for_dir(cfg_swipe, dir);
+printf("%s: touches=%d dir=%d button=%d\n", __func__, touches_count, dir, button);
 	if(button == -1){
 		/* No button? Probably fingers were still down,
 		 * but without movement.
@@ -758,6 +761,153 @@ static int trigger_swipe_unsafe(struct Gestures* gs,
 		dist, dir, gs->move_dist, cfg_swipe->dist);
 	return 1;
 }
+
+static int one_touch(
+	struct Gestures* gs,
+	const struct MConfig* cfg,
+	const struct Touch* touches[],
+	const int touches_count
+)
+{
+	if (touches_count != 1)
+		return 0;
+
+	// compute the current point and the previous point
+	// x0,y0 is finger 0
+	const int x01 = touches[0]->x;
+	const int y01 = touches[0]->y;
+
+	// compute the average motion based on the velocity
+	const int dx = touches[0]->dx;
+	const int dy = touches[0]->dy;
+	const int v2 = dx*dx + dy * dy;
+
+	if (v2 > 1)
+		printf("MOVE1  %+6d %+6d\n", dx, dy);
+
+	mouse_move(dx, dy);
+
+	return 0;
+}
+
+
+static int two_touch(
+	struct Gestures* gs,
+	const struct MConfig* cfg,
+	const struct Touch* touches[],
+	const int touches_count
+)
+{
+	static int touching;
+
+	if (touches_count != 2)
+	{
+		// release the mouse button
+		if (touching)
+			mouse_button(2, 0);
+		touching = 0;
+		return 0;
+	}
+
+	if (!touching)
+	{
+		// engage the mouse button
+		mouse_button(2, 1);
+		touching = 1;
+	}
+
+	// compute the current point and the previous point
+	// x0,y0 is finger 0
+	const int x00 = touches[0]->x - touches[0]->dx;
+	const int y00 = touches[0]->y - touches[0]->dy;
+	const int x01 = touches[0]->x;
+	const int y01 = touches[0]->y;
+
+	// x1,y1 is finger 1
+	const int x10 = touches[1]->x - touches[1]->dx;
+	const int y10 = touches[1]->y - touches[1]->dy;
+	const int x11 = touches[1]->x;
+	const int y11 = touches[1]->y;
+
+	// compute the average motion based on the velocity
+	const int dx = (touches[0]->dx + touches[1]->dx) / 2;
+	const int dy = (touches[0]->dy + touches[1]->dy) / 2;
+	const int v2 = dx*dx + dy * dy;
+
+	// nothing to do
+	if (v2 == 0)
+		return 0;
+
+	// compute the distance between the two fingers at
+	// the current time and the previous time
+	// L0 is finger 1 - finger 0 at time 0
+	// L1 is finger 1 - finger 0 at time 1
+	const int L0x = x10 - x00;
+	const int L0y = y10 - y00;
+	const int L1x = x11 - x01;
+	const int L1y = y11 - y01;
+
+	const double L0 = sqrt(L0x*L0x + L0y*L0y);
+	const double L1 = sqrt(L1x*L1x + L1y*L1y);
+
+	// compute the rotation angle that satisfies this
+	// distances by computing the cross product of their
+	// unit vectors.
+	double L0crossL1 = (L0x * L1y - L0y * L1x) / (L0*L1);
+	const double theta = asin(L0crossL1) * 180 / M_PI;
+
+	// and compute the scale factor that satisfies the
+	// change in distance
+	const double scale = fabs(L1 / L0) - 1.0;
+
+	int verbose = 0;
+
+	if (verbose)
+	printf("%+6d,%+6d %+6d,%+6d = %+6d,%+6d * %+6.3f @ %+5.3f %+6d %+6d %+6d %+6d %+6.6f\n",
+		//touches[0]->tracking_id,
+		touches[0]->x,
+		touches[0]->y,
+		//touches[1]->tracking_id,
+		touches[1]->x,
+		touches[1]->y,
+		dx, dy,
+		scale,
+		theta,
+		L0x, L0y,
+		L1x, L1y,
+		L0crossL1
+	);
+
+	// what's largest? shift, scale, or rotate?
+	if (fabs(theta) > 0.1)
+	{
+		if (touching != 4)
+			mouse_modifiers(4);
+		touching = 4;
+		mouse_move(theta, 0);
+		printf("ROTATE %+6.3f\n", theta);
+	} else
+	if (fabs(scale) > 0.002)
+	{
+		if (touching != 2)
+			mouse_modifiers(2);
+		touching = 2;
+		mouse_move(0, scale * 10);
+		printf("SCALE  %+6.3f\n", scale);
+	} else
+	if (v2 > 1)
+	{
+		// no modifiers for movement
+		if (touching != 1)
+			mouse_modifiers(0);
+		printf("MOVE2  %+6d %+6d\n", dx, dy);
+		mouse_move(dx, dy);
+		touching = 1;
+	}
+
+	return 1;
+}
+
 
 /* Return:
  *  0 - it wasn't swipe
@@ -1066,6 +1216,7 @@ static int trigger_scale(struct Gestures* gs, const struct MConfig* cfg,
 		return 0;
 	}
 
+#if 0
 	/* Check if both vectors are on more or less same axis, but with different directions: */
 	angles_diff = trig_angles_acute(d0, d1); /* less eq 4.0 */
 	angles_diff = trig_angles_sub(4.0, angles_diff);
@@ -1073,6 +1224,7 @@ static int trigger_scale(struct Gestures* gs, const struct MConfig* cfg,
 		LOG_SCALE("trigger_scale: movement foo tar from scaling axis, diff: %lf, max_error: %lf\n", angles_diff, max_error);
 		return 0;
 	}
+#endif
 
 	dist = dist2(t0->dx,t0->dy) + dist2(t1->dx, t1->dy);
 	/* Determinate is it zoom in or zoom out */
@@ -1086,6 +1238,7 @@ static int trigger_scale(struct Gestures* gs, const struct MConfig* cfg,
 	gs->move_type = GS_SCALE;
 	gs->move_dist += ABSVAL(dist);
 	gs->move_dir = dir;
+printf("%s: dist=%d\n", __func__, dist);
 	timeraddms(&gs->time, cfg->gesture_wait, &gs->move_wait);
 	if (gs->move_dist >= cfg->scale_dist) {
 		gs->move_dist = MODVAL(gs->move_dist, cfg->scale_dist);
@@ -1190,6 +1343,10 @@ static void moving_update(struct Gestures* gs,
 		}
 	}
 
+	one_touch(gs, cfg, touches, count);
+	two_touch(gs, cfg, touches, count);
+
+#if 0
 	// Determine gesture type.
 	if (cfg->trackpad_disable < 1 && trigger_hold_move(gs, cfg, touches, count)){
 		/* nothing to do */
@@ -1208,6 +1365,7 @@ static void moving_update(struct Gestures* gs,
 		trigger_move(gs, cfg, dx, dy);
 	}
 	else if (count == 2 && cfg->trackpad_disable < 1) {
+#if 0
 		// scroll, scale, or rotate
 		if (trigger_swipe(gs, cfg, touches, count)) {
 			/* nothing to do */
@@ -1220,12 +1378,16 @@ static void moving_update(struct Gestures* gs,
 		else if(trigger_scale(gs,cfg, touches[0], touches[1])){
 			/* nothing to do */
 		}
+#else
+		two_touch(gs, cfg, touches, count);
+#endif
 	}
 	else if ((count == 3 || count == 4) && cfg->trackpad_disable < 1) {
 		if (trigger_swipe(gs, cfg, touches, count)) {
 			/* nothing to do */
 		}
 	}
+#endif
 }
 
 static void dragging_update(struct Gestures* gs, const struct MConfig* cfg)
@@ -1270,11 +1432,11 @@ void gestures_extract(struct MTouch* mt)
 	timersub(&mt->hs.evtime, &mt->gs.time, &mt->gs.dt);
 	timercp(&mt->gs.time, &mt->hs.evtime);
 
-	dragging_update(&mt->gs, &mt->cfg);
-	buttons_update(&mt->gs, &mt->cfg, &mt->hs, &mt->state);
-	tapping_update(&mt->gs, &mt->cfg, &mt->state);
+	//dragging_update(&mt->gs, &mt->cfg);
+	//buttons_update(&mt->gs, &mt->cfg, &mt->hs, &mt->state);
+	//tapping_update(&mt->gs, &mt->cfg, &mt->state);
 	moving_update(&mt->gs, &mt->cfg, &mt->state);
-	delayed_update(&mt->gs);
+	//delayed_update(&mt->gs);
 }
 
 /**

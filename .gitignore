@@ -5,7 +5,6 @@
 *.dirstamp
 .deps/
 .libs/
-Makefile
 Makefile.in
 
 /m4

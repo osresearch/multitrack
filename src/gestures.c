@@ -888,17 +888,17 @@ static int two_touch(
 	if (fabs(theta) > 0.1)
 	{
 		if (touching != 4)
-			mouse_modifiers(4);
+			mouse_modifiers(ShiftMask);
 		touching = 4;
-		mouse_move(theta, 0);
+		mouse_move(theta * 10, 0);
 		printf("ROTATE %+6.3f\n", theta);
 	} else
 	if (fabs(scale) > 0.002)
 	{
 		if (touching != 2)
-			mouse_modifiers(2);
+			mouse_modifiers(ControlMask);
 		touching = 2;
-		mouse_move(0, scale * 10);
+		mouse_move(0, scale * 1000);
 		printf("SCALE  %+6.3f\n", scale);
 	} else
 	if (v2 > 1)

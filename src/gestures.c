@@ -807,19 +807,13 @@ static int two_touch(
 		// release the mouse button and any modifiers
 		if (touching)
 		{
+			printf("%s: release\n", __func__);
 			mouse_button(2, 0);
 			mouse_modifiers(0);
 		}
 
 		touching = 0;
 		return 0;
-	}
-
-	if (!touching)
-	{
-		// engage the mouse button
-		mouse_button(2, 1);
-		touching = 1;
 	}
 
 	// compute the current point and the previous point
@@ -838,10 +832,10 @@ static int two_touch(
 	// compute the average motion based on the velocity
 	const int dx = (touches[0]->dx + touches[1]->dx) / 2;
 	const int dy = (touches[0]->dy + touches[1]->dy) / 2;
-	const int v2 = dx*dx + dy * dy;
+	const double v = sqrt(dx*dx + dy * dy);
 
 	// nothing to do
-	if (v2 == 0)
+	if (v == 0)
 		return 0;
 
 	// compute the distance between the two fingers at
@@ -866,9 +860,9 @@ static int two_touch(
 	// change in distance
 	const double scale = fabs(L1 / L0) - 1.0;
 
-	int verbose = 0;
+	int verbose = 1;
 
-	if (verbose)
+	if (verbose == 2)
 	printf("%+6d,%+6d %+6d,%+6d = %+6d,%+6d * %+6.3f @ %+5.3f %+6d %+6d %+6d %+6d %+6.6f\n",
 		//touches[0]->tracking_id,
 		touches[0]->x,
@@ -883,34 +877,71 @@ static int two_touch(
 		L1x, L1y,
 		L0crossL1
 	);
+	else
+	if (verbose == 1)
+		printf("%+6d,%+6d * %+6.3f @ %+6.3f: ", dx, dy, scale, theta);
 
 	// what's largest? shift, scale, or rotate?
-	if (fabs(theta) > 0.1)
+	double theta_threshold = 0.1;
+	double scale_threshold = 0.002;
+	double move_threshold = 2;
+
+	if (touching == 3)
+		theta_threshold /= 4;
+	if (touching == 2)
+		scale_threshold /= 4;
+	if (touching == 1)
+		move_threshold /= 4;
+
+	if (fabs(theta) > theta_threshold && touching != 3)
 	{
-		if (touching != 4)
-			mouse_modifiers(ShiftMask);
-		touching = 4;
-		mouse_move(theta * 10, 0);
-		printf("ROTATE %+6.3f\n", theta);
+		printf("ROTATING (was %d) ", touching);
+		if (touching)
+			mouse_button(2, 0);
+		mouse_modifiers(ShiftMask | ControlMask);
+		mouse_button(2, 1);
+		touching = 3;
 	} else
-	if (fabs(scale) > 0.002)
+	if (fabs(scale) > scale_threshold && touching != 2)
 	{
-		if (touching != 2)
-			mouse_modifiers(ControlMask);
+		printf("SCALING (was %d) ", touching);
+		if (touching)
+			mouse_button(2, 0);
+		mouse_modifiers(ControlMask);
+		mouse_button(2, 1);
 		touching = 2;
-		mouse_move(0, scale * 1000);
-		printf("SCALE  %+6.3f\n", scale);
 	} else
-	if (v2 > 1)
+	if (touching == 0 || (fabs(v) > move_threshold && touching != 1))
 	{
 		// no modifiers for movement
-		if (touching != 1)
-			mouse_modifiers(0);
-		printf("MOVE2  %+6d %+6d\n", dx, dy);
-		mouse_move(dx, dy);
+		printf("MOVING (was %d) ", touching);
+		if (touching)
+			mouse_button(2, 0);
+		mouse_modifiers(0);
+		mouse_button(2, 1);
 		touching = 1;
 	}
 
+
+	if (touching == 3)
+	{
+		printf("ROTATE %+6.3f", theta);
+		mouse_move(theta * 10, 0);
+	}
+
+	if (touching == 2)
+	{
+		printf("SCALE  %+6.3f", scale);
+		mouse_move(0, scale * 1000);
+	}
+
+	if (touching == 1)
+	{
+		printf("MOVE2  %+6d %+6d", dx, dy);
+		mouse_move(dx, dy);
+	}
+
+	printf("\n");
 	return 1;
 }
 

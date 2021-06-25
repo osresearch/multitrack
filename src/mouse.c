@@ -38,6 +38,20 @@ void mouse_setup(void)
 
 	if (err)
 		fprintf(stderr, "libevdev create error %d\n", err);
+
+	// the default behaviour is that the scroll events are
+	// translated into button 4,5,6,7 instead of as raw motion.
+	// which makes for a very steppy sort of input.
+	// xinput set-prop 19 "libinput Scroll Method Enabled" 0 0 0
+	// we want to set LIBINPUT_CONFIG_SCROLL_NO_SCROLL
+	// turn scroll method off, but none of the APIs seem to
+	// make it easy to turn an fd or libevdev_uinput into
+	// a libinput_device.
+	usleep(500000);
+	system("xinput set-prop 'pointer:multitrack' 'libinput Scroll Method Enabled' 0 0 0");
+
+	//struct libinput_device * input_dev;
+	//libinput_device_config_scroll_set_method(input_dev, 0);
 }
 
 
@@ -50,11 +64,6 @@ mouse_move(int dx, int dy)
 	libevdev_uinput_write_event(uidev, EV_REL, REL_X, dx);
 	libevdev_uinput_write_event(uidev, EV_REL, REL_Y, dy);
 	libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
-
-	//XTestFakeRelativeMotionEvent(display, dx, dy, CurrentTime);
-	//XFlush(display);
-
-	//XSync(display, False);
 }
 
 
@@ -62,7 +71,6 @@ void
 mouse_button(int button, int is_press)
 {
 	mouse_setup();
-
 	static const int buttons[] = {
 		0,
 		BTN_LEFT,
@@ -70,12 +78,12 @@ mouse_button(int button, int is_press)
 		BTN_RIGHT,
 	};
 
+	if (button == 0)
+		return;
+
+	printf("button %d/%04x=%d\n", button, buttons[button], is_press);
 	libevdev_uinput_write_event(uidev, EV_KEY, buttons[button], is_press);
 	libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);
-	//XTestFakeButtonEvent(display, button, is_press, CurrentTime);
-	//XSync(display, False);
-	//XFlush(display);
-	//usleep(5000);
 }
 
 void
@@ -99,7 +107,6 @@ mouse_modifiers(int modmask)
 
 		printf("modified %d=%d\n", i, is_press);
 		libevdev_uinput_write_event(uidev, EV_KEY, modifiers[i], is_press);
-		//usleep(5000);
 	}
 
 	libevdev_uinput_write_event(uidev, EV_SYN, SYN_REPORT, 0);

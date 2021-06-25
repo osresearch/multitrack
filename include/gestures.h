@@ -105,6 +105,8 @@ struct Gestures {
 
 void gestures_init(struct MTouch* mt);
 void gestures_extract(struct MTouch* mt);
+
+#if 0
 int gestures_delayed(struct MTouch* mt);
 
 static int buttons_zone_update(
@@ -117,6 +119,7 @@ static void touch_detect_update(
 	const struct MConfig* cfg,
 	const struct MTState* ms,
 	int latest);
+#endif
 
 
 #endif

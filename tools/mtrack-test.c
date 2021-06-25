@@ -92,8 +92,10 @@ static void loop_device(int fd)
 	while (1) {
 		while (mtouch_read(&mt) > 0)
 			print_gestures(&mt.gs);
+/*
 		if (mtouch_delayed(&mt))
 			print_gestures(&mt.gs);
+*/
 	}
 	mtouch_close(&mt);
 }

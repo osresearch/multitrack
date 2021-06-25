@@ -81,8 +81,9 @@ int mtouch_read(struct MTouch* mt)
 	return 1;
 }
 
+#if 0
 int mtouch_delayed(struct MTouch* mt)
 {
 	return gestures_delayed(mt);
 }
-
+#endif

@@ -44,6 +44,7 @@
 
 #define IS_VALID_BUTTON(x) (x >= 0 && x <= 31)
 
+#if 0
 static void break_coasting(struct Gestures* gs){
 	gs->scroll_speed_x = gs->scroll_speed_y = 0.0f;
 }
@@ -763,6 +764,7 @@ printf("%s: touches=%d dir=%d button=%d\n", __func__, touches_count, dir, button
 		dist, dir, gs->move_dist, cfg_swipe->dist);
 	return 1;
 }
+#endif
 
 static int one_touch(
 	struct Gestures* gs,
@@ -787,7 +789,7 @@ static int one_touch(
 	if (v2 > 1)
 		printf("MOVE1  %+6d %+6d\n", dx, dy);
 
-	mouse_move(dx, dy);
+	//mouse_move(dx, dy);
 
 	return 0;
 }
@@ -802,6 +804,7 @@ static int two_touch(
 {
 	static int touching;
 	static struct timeval last_switch;
+	const int button = 2;
 
 	if (touches_count != 2)
 	{
@@ -809,14 +812,17 @@ static int two_touch(
 		if (touching)
 		{
 			printf("%s: release\n", __func__);
-			mouse_button(2, 0);
 			mouse_modifiers(0);
+			mouse_button(button, 0);
 		}
 
 		touching = 0;
 		last_switch.tv_sec = 0;
 		return 0;
 	}
+
+	if (!touching)
+		mouse_button(button, 1);
 
 	struct timeval now;
 	microtime(&now);
@@ -901,6 +907,7 @@ static int two_touch(
 */
 	struct timeval delta;
 	timersub(&now, &last_switch, &delta);
+#if 0
 	if (delta.tv_sec < 1 && delta.tv_sec < 500000)
 	{
 		// do not switch more than twice per second
@@ -912,9 +919,9 @@ static int two_touch(
 		last_switch = now;
 		printf("ROTATING (was %d) ", touching);
 		if (touching)
-			mouse_button(2, 0);
+			mouse_button(button, 0);
 		mouse_modifiers(ShiftMask | ControlMask);
-		mouse_button(2, 1);
+		mouse_button(button, 1);
 		touching = 3;
 	} else
 	if (fabs(scale) > scale_threshold && touching != 2)
@@ -922,20 +929,21 @@ static int two_touch(
 		last_switch = now;
 		printf("SCALING (was %d) ", touching);
 		if (touching)
-			mouse_button(2, 0);
+			mouse_button(button, 0);
 		mouse_modifiers(ControlMask);
-		mouse_button(2, 1);
+		mouse_button(button, 1);
 		touching = 2;
 	} else
+#endif
 	if (touching == 0 || (fabs(v) > move_threshold && touching != 1))
 	{
 		last_switch = now;
 		// no modifiers for movement
 		printf("MOVING (was %d) ", touching);
 		if (touching)
-			mouse_button(2, 0);
+			mouse_button(button, 0);
 		mouse_modifiers(0);
-		mouse_button(2, 1);
+		mouse_button(button, 1);
 		touching = 1;
 	}
 
@@ -952,7 +960,7 @@ static int two_touch(
 		mouse_move(0, scale * 1000);
 	}
 
-	if (touching == 1)
+	if (touching == 1 && fabs(v) > move_threshold)
 	{
 		printf("MOVE2  %+6d %+6d", dx, dy);
 		mouse_move(dx, dy);
@@ -963,6 +971,7 @@ static int two_touch(
 }
 
 
+#if 0
 /* Return:
  *  0 - it wasn't swipe
  *  1 - it was swipe and was executed
@@ -1361,6 +1370,7 @@ static int get_rotate_dir(const struct Touch* t1,
 		return TR_DIR_LT;
 	return TR_NONE;
 }
+#endif
 
 static void moving_update(struct Gestures* gs,
 			const struct MConfig* cfg,
@@ -1444,6 +1454,8 @@ static void moving_update(struct Gestures* gs,
 #endif
 }
 
+#if 0
+
 static void dragging_update(struct Gestures* gs, const struct MConfig* cfg)
 {
 	if (gs->drag_state == GS_DRAG_READY && timercmp(&gs->time, &gs->move_drag_expire, >)) {
@@ -1474,6 +1486,7 @@ static void delayed_update(struct Gestures* gs)
 #endif
 	}
 }
+#endif
 
 void gestures_init(struct MTouch* mt)
 {
@@ -1493,6 +1506,7 @@ void gestures_extract(struct MTouch* mt)
 	//delayed_update(&mt->gs);
 }
 
+#if 0
 /**
  *  Executed every input time frame, at least once. First time from 'read_input' to check if
  * timer is needed.
@@ -1561,3 +1575,4 @@ int gestures_delayed(struct MTouch* mt)
 	gs->move_dx = gs->move_dy = 0.0;
 	return -MT_TIMER_DELAYED_BUTTON; /* remove delayed button timer */
 }
+#endif

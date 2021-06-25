@@ -3,6 +3,8 @@ CFLAGS = \
 	-W \
 	-Wall \
 	-I include \
+	-MMD \
+	-MF ".$(notdir $@).d" \
 	`pkg-config xorg-server --cflags` \
 	`pkg-config mtdev --cflags` \
 	`pkg-config libevdev --cflags` \
@@ -36,5 +38,7 @@ multitrack: $(multitrack_objs)
 		-lm \
 
 clean:
-	$(RM) $(multitrack_objs) core a.out
+	$(RM) $(multitrack_objs) core a.out .*.d
 
+
+-include .*.d

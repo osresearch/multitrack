@@ -29,17 +29,17 @@
 # define LOG_DEBUG_MTSTATE LOG_DISABLED
 #endif
 
-static int inline percentage(int dividend, int divisor)
+static inline int percentage(int dividend, int divisor)
 {
 	return (double)dividend / (double)divisor * 100;
 }
 
-static int inline touch_range_ratio(const struct MConfig* cfg, int value)
+static inline int touch_range_ratio(const struct MConfig* cfg, int value)
 {
 	return (double)(value - cfg->touch_min) / (double)(cfg->touch_max - cfg->touch_min) * 100;
 }
 
-static int inline pressure_range_ratio(const struct MConfig* cfg, int value)
+static inline int pressure_range_ratio(const struct MConfig* cfg, int value)
 {
 	return percentage(value - cfg->pressure_min, cfg->pressure_max - cfg->pressure_min);
 }

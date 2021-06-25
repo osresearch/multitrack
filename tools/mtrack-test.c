@@ -27,6 +27,7 @@
 
 void xf86Msg(int type, const char *format, ...)
 {
+	(void) type;
 	va_list args;
 	va_start(args, format);
 	vfprintf(stderr, format, args);
@@ -39,16 +40,22 @@ typedef XF86OptionPtr pointer;
 
 int xf86SetIntOption(XF86OptionPtr opts, const char *name, int deflt)
 {
+	(void) opts;
+	(void) name;
 	return deflt;
 }
 
 int xf86SetBoolOption(XF86OptionPtr opts, const char *name, int deflt)
 {
+	(void) opts;
+	(void) name;
 	return deflt;
 }
 
 double xf86SetRealOption(XF86OptionPtr opts, const char *name, double deflt)
 {
+	(void) opts;
+	(void) name;
 	return deflt;
 }
 

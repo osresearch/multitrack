@@ -104,12 +104,21 @@ static inline int get_next_log_number(){
 	return ++last;
 }
 
+#if 0
 /* Retrieve the current time and place it in tv.
  */
 static inline void microtime(struct timeval* tv)
 {
 	gettimeofday(tv, NULL);
 }
+#endif
+
+static inline uint64_t microtime(void)
+{
+	struct timeval tv;
+	return tv.tv_usec + tv.tv_sec * (uint64_t) 100000000;
+}
+
 
 /* Copy one time value to another.
  */

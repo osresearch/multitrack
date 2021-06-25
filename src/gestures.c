@@ -773,6 +773,9 @@ static int one_touch(
 	const int touches_count
 )
 {
+	(void) gs;
+	(void) cfg;
+
 	if (touches_count != 1)
 		return 0;
 
@@ -802,8 +805,11 @@ static int two_touch(
 	const int touches_count
 )
 {
+	(void) gs;
+	(void) cfg;
+
 	static int touching;
-	static struct timeval last_switch;
+	static uint64_t last_switch; // in usec
 	const int button = 2;
 
 	if (touches_count != 2)
@@ -817,15 +823,14 @@ static int two_touch(
 		}
 
 		touching = 0;
-		last_switch.tv_sec = 0;
+		last_switch = 0;
 		return 0;
 	}
 
 	if (!touching)
 		mouse_button(button, 1);
 
-	struct timeval now;
-	microtime(&now);
+	const uint64_t now = microtime();
 
 	// compute the current point and the previous point
 	// x0,y0 is finger 0
@@ -905,8 +910,7 @@ static int two_touch(
 	if (touching == 1)
 		move_threshold /= 4;
 */
-	struct timeval delta;
-	timersub(&now, &last_switch, &delta);
+	const uint64_t delta = now - last_switch;
 #if 0
 	if (delta.tv_sec < 1 && delta.tv_sec < 500000)
 	{
@@ -960,7 +964,7 @@ static int two_touch(
 		mouse_move(0, scale * 1000);
 	}
 
-	if (touching == 1 && fabs(v) > move_threshold)
+	if (touching == 1)
 	{
 		printf("MOVE2  %+6d %+6d", dx, dy);
 		mouse_move(dx, dy);
